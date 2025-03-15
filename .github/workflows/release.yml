@@ -48,7 +48,7 @@ jobs:
           GOOS: ${{ env.GOOS }}
           EXT: ${{ env.EXT }}
         run: |
-          go build -o SNI-Finder-${{ env.GOOS }}-${{ matrix.arch }}${{ env.EXT }} .
+          go build -o sni-finder-${{ env.GOOS }}-${{ matrix.arch }}${{ env.EXT }} .
 
       - name: Upload binaries
         uses: actions/upload-artifact@v4
