@@ -53,8 +53,8 @@ jobs:
       - name: Upload binaries
         uses: actions/upload-artifact@v4
         with:
-          name: SNI-Finder-${{ env.GOOS }}-${{ matrix.arch }}${{ env.EXT }}
-          path: SNI-Finder-${{ env.GOOS }}-${{ matrix.arch }}${{ env.EXT }}
+          name: sni-finder-${{ env.GOOS }}-${{ matrix.arch }}${{ env.EXT }}
+          path: sni-finder-${{ env.GOOS }}-${{ matrix.arch }}${{ env.EXT }}
 
   release:
     name: Create GitHub Release
