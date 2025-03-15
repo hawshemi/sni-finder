@@ -61,5 +61,6 @@ chmod +x "$asset_name"
 echo
 echo "$asset_name Downloaded."
 echo "Run with: ./"$asset_name --addr ip""
+echo "The "ip" would be your VPS IP Address."
 echo
 
