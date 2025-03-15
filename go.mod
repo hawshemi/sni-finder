@@ -1,4 +1,4 @@
-module github.com/hawshemi/SNI-Finder
+module sni-finder
 
 go 1.21.3
 
