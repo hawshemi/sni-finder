@@ -58,5 +58,8 @@ curl -L -o "$asset_name" "$download_url"
 
 # --- Set Execute Permissions & Run the Binary ---
 chmod +x "$asset_name"
-echo "$asset_name Downloaded. Run with: ./"$asset_name --addr ip" "
+echo
+echo "$asset_name Downloaded."
+echo "Run with: ./"$asset_name --addr ip""
+echo
 
