@@ -11,11 +11,9 @@ It is recommended to run this scanner locally _(with your residential internet)_
 
 ### Linux/Mac OS:
 
-Be careful when choosing an architecture, all binaries are available in two versions - `amd64` and `arm64`.
-
 1.
     ```
-    wget "https://github.com/hawshemi/SNI-Finder/releases/latest/download/SNI-Finder-$(uname -s | tr A-Z a-z)-amd64" -O SNI-Finder && chmod +x SNI-Finder
+    curl -L "https://raw.githubusercontent.com/hawshemi/dns-tester/main/sni-finder-run.sh" -o sni-finder-run.sh && chmod +x sni-finder-run.sh && bash sni-finder-run.sh
     ```
 2. 
     ```
