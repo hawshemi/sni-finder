@@ -17,7 +17,7 @@ It is recommended to run this scanner locally _(with your residential internet)_
     ```
 2. 
     ```
-    ./SNI-Finder -addr ip
+    ./sni-finder -addr ip
     ```
 
 ### Windows:
@@ -26,7 +26,7 @@ It is recommended to run this scanner locally _(with your residential internet)_
 2. Open `CMD` or `Powershell` in the directory.
 3.
     ```
-    .\SNI-Finder-windows-amd64.exe -addr ip
+    .\sni-finder-windows-amd64.exe -addr ip
     ```
 
 #### Replace `ip` with your VPS IP Address.
@@ -52,17 +52,17 @@ wget "https://raw.githubusercontent.com/hawshemi/SNI-Finder/main/install-go.sh" 
 
 #### 1. Clone the repository
 ```
-git clone https://github.com/hawshemi/SNI-Finder.git 
+git clone https://github.com/hawshemi/sni-finder.git 
 ```
 
 #### 2. Navigate into the repository directory
 ```
-cd SNI-Finder 
+cd sni-finder
 ```
 
-#### 3. Download and install `logrus` package
+#### 3. Initiate and download deps
 ```
-go get github.com/sirupsen/logrus
+go mod init sni-finder && go mod tidy
 ```
 
 #### 4. Build
