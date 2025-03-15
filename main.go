@@ -28,15 +28,17 @@ const (
 	workerPoolSize     = 100
 )
 
-var log = logrus.New()
-var zeroIP = net.ParseIP("0.0.0.0")
-var maxIP = net.ParseIP("255.255.255.255")
-var TlsDic = map[uint16]string{
-	0x0301: "1.0",
-	0x0302: "1.1",
-	0x0303: "1.2",
-	0x0304: "1.3",
-}
+var (
+	log    = logrus.New()
+	zeroIP = net.ParseIP("0.0.0.0")
+	maxIP  = net.ParseIP("255.255.255.255")
+	TlsVersions = map[uint16]string{
+		0x0301: "1.0",
+		0x0302: "1.1",
+		0x0303: "1.2",
+		0x0304: "1.3",
+	}
+)
 
 type CustomTextFormatter struct {
 	logrus.TextFormatter
@@ -53,7 +55,7 @@ type Scanner struct {
 	mu             sync.Mutex
 	ip             net.IP
 	logFile        *os.File
-	domainFile     *os.File // New file pointer for domains.txt
+	domainFile     *os.File
 	dialer         *net.Dialer
 	logChan        chan string
 }
@@ -63,14 +65,16 @@ func (f *CustomTextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	msg := entry.Message
 
 	// Create the log entry without the "level=info" and with a new line
-	formattedEntry := timestamp + msg + "\n\n"
-
-	return []byte(formattedEntry), nil
+	return []byte(timestamp + msg + "\n\n"), nil
 }
 
 func (s *Scanner) Print(outStr string) {
 	// Split the output string into IP address and the rest
 	parts := strings.Split(outStr, " ")
+	if len(parts) < 2 {
+		return
+	}
+	
 	ipAddress := parts[0]                // Extract the IP address part
 	rest := strings.Join(parts[1:], " ") // Extract the rest of the message
 
@@ -86,8 +90,10 @@ func (s *Scanner) Print(outStr string) {
 	// Extract the domain from the log entry
 	domain := extractDomain(logEntry)
 
-	// Save the domain to domains.txt
-	saveDomain(domain, s.domainFile)
+	// Save the domain to domains.txt if it's not empty
+	if domain != "" {
+		saveDomain(domain, s.domainFile)
+	}
 
 	s.logChan <- logEntry
 }
@@ -109,11 +115,13 @@ func extractDomain(logEntry string) string {
 }
 
 func saveDomain(domain string, file *os.File) {
-	if domain != "" {
-		_, err := file.WriteString(domain + "\n")
-		if err != nil {
-			log.WithError(err).Error("Error writing domain into file")
-		}
+	if domain == "" {
+		return
+	}
+	
+	_, err := file.WriteString(domain + "\n")
+	if err != nil {
+		log.WithError(err).Error("Error writing domain into file")
 	}
 }
 
@@ -126,39 +134,17 @@ func main() {
 	showFailPtr := flag.Bool("showFail", showFailDef, "Is Show fail logs")
 
 	flag.Parse()
-	s := &Scanner{
-		addr:           *addrPtr,
-		port:           *portPtr,
-		showFail:       *showFailPtr,
-		output:         *outPutFile,
-		timeout:        time.Duration(*timeOutPtr) * time.Second,
-		wg:             &sync.WaitGroup{},
-		numberOfThread: *threadPtr,
-		ip:             net.ParseIP(*addrPtr),
-		dialer:         &net.Dialer{},
-		logChan:        make(chan string, numIPsToCheck),
-	}
-
+	
 	// Initialize Logrus settings
 	log.SetFormatter(&CustomTextFormatter{})
 	log.SetLevel(logrus.InfoLevel) // Set the desired log level
 
-	// Open results.txt file for writing
-	var err error
-	s.logFile, err = os.OpenFile(outPutFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
-	if err != nil {
-		log.WithError(err).Error("Failed to open log file")
+	// Setup scanner with configuration
+	s := setupScanner(*addrPtr, *portPtr, *showFailPtr, *outPutFile, *timeOutPtr, *threadPtr)
+	if s == nil {
 		return
 	}
-	defer s.logFile.Close()
-
-	// Open domains.txt file for writing
-	s.domainFile, err = os.OpenFile(domainsFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
-	if err != nil {
-		log.WithError(err).Error("Failed to open domains.txt file")
-		return
-	}
-	defer s.domainFile.Close()
+	defer s.cleanup()
 
 	go s.logWriter()
 
@@ -185,6 +171,48 @@ func main() {
 	s.wg.Wait()
 	close(s.logChan)
 	log.Info("Scan completed.")
+}
+
+func setupScanner(addr, port string, showFail, output bool, timeoutSec int, threads int) *Scanner {
+	s := &Scanner{
+		addr:           addr,
+		port:           port,
+		showFail:       showFail,
+		output:         output,
+		timeout:        time.Duration(timeoutSec) * time.Second,
+		wg:             &sync.WaitGroup{},
+		numberOfThread: threads,
+		ip:             net.ParseIP(addr),
+		dialer:         &net.Dialer{},
+		logChan:        make(chan string, numIPsToCheck),
+	}
+
+	// Open results.txt file for writing
+	var err error
+	s.logFile, err = os.OpenFile(outPutFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {
+		log.WithError(err).Error("Failed to open log file")
+		return nil
+	}
+
+	// Open domains.txt file for writing
+	s.domainFile, err = os.OpenFile(domainsFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {
+		log.WithError(err).Error("Failed to open domains.txt file")
+		s.logFile.Close()
+		return nil
+	}
+
+	return s
+}
+
+func (s *Scanner) cleanup() {
+	if s.logFile != nil {
+		s.logFile.Close()
+	}
+	if s.domainFile != nil {
+		s.domainFile.Close()
+	}
 }
 
 func (s *Scanner) logWriter() {
@@ -236,25 +264,26 @@ func (s *Scanner) Scan(ip net.IP) {
 		str = "[" + str + "]"
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
 	defer cancel()
 
 	conn, err := s.dialer.DialContext(ctx, "tcp", str+":"+s.port)
-
 	if err != nil {
 		if s.showFail {
 			s.Print(fmt.Sprintf("Dial failed: %v", err))
 		}
 		return
 	}
-
 	defer conn.Close() // Ensure the connection is closed
 
 	remoteAddr := conn.RemoteAddr().(*net.TCPAddr)
 	remoteIP := remoteAddr.IP.String()
 	port := remoteAddr.Port
 	line := fmt.Sprintf("%s:%d", remoteIP, port) + "\t"
+	
+	// Set deadline for TLS handshake
 	conn.SetDeadline(time.Now().Add(s.timeout))
+	
 	c := tls.Client(conn, &tls.Config{
 		InsecureSkipVerify: true,
 		NextProtos:         []string{"h2", "http/1.1"},
@@ -267,7 +296,6 @@ func (s *Scanner) Scan(ip net.IP) {
 		}
 		return
 	}
-
 	defer c.Close() // Ensure the TLS client is also properly closed
 
 	state := c.ConnectionState()
@@ -283,12 +311,20 @@ func (s *Scanner) Scan(ip net.IP) {
 			certSubject = state.PeerCertificates[0].Subject.CommonName
 		}
 
-		numPeriods := strings.Count(certSubject, ".")
-
-		if strings.HasPrefix(certSubject, "*") || certSubject == "localhost" || numPeriods != 1 || certSubject == "invalid2.invalid" || certSubject == "OPNsense.localdomain" {
+		// Filter out invalid certificates
+		if isInvalidCertificate(certSubject) {
 			return
 		}
 
-		s.Print(fmt.Sprint(" ", line, "---- TLS v", TlsDic[state.Version], "    ALPN: ", alpn, " ----    ", certSubject, ":", s.port))
+		s.Print(fmt.Sprint(" ", line, "---- TLS v", TlsVersions[state.Version], "    ALPN: ", alpn, " ----    ", certSubject, ":", s.port))
 	}
+}
+
+func isInvalidCertificate(certSubject string) bool {
+	numPeriods := strings.Count(certSubject, ".")
+	return strings.HasPrefix(certSubject, "*") || 
+	       certSubject == "localhost" || 
+	       numPeriods != 1 || 
+	       certSubject == "invalid2.invalid" || 
+	       certSubject == "OPNsense.localdomain"
 }
