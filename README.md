@@ -13,7 +13,7 @@ It is recommended to run this scanner locally _(with your residential internet)_
 
 1.
     ```
-    curl -L "https://raw.githubusercontent.com/hawshemi/dns-tester/main/sni-finder-run.sh" -o sni-finder-run.sh && chmod +x sni-finder-run.sh && bash sni-finder-run.sh
+    curl -L "https://raw.githubusercontent.com/hawshemi/sni-finder/main/sni-finder-run.sh" -o sni-finder-run.sh && chmod +x sni-finder-run.sh && bash sni-finder-run.sh
     ```
 2. 
     ```
