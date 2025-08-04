@@ -20,6 +20,21 @@ It is recommended to run this scanner locally _(with your residential internet)_
     ./sni-finder -addr ip
     ```
 
+### Docker:
+
+1.
+    ```
+    git clone https://github.com/hawshemi/SNI-Finder/ && cd SNI-Finder
+    ```
+2.
+    ```
+    docker build -t "sni-finder:latest" .
+    ```
+3.
+    ```
+    docker run -d sni-finder -addr ip
+    ```
+
 ### Windows:
 
 1. Download from [Releases](https://github.com/hawshemi/SNI-Finder/releases/latest).
